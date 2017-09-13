@@ -13,6 +13,7 @@ linux-hwe-4.10.0
 |  +--entry
 |     +--syscalls
 |        +--syscall_64.tbl (Modified syscall tbl with helloworld and simple_add)
++--generate.sh (File to build and install modified kernel)
 +--include
    +--linux
       +--syscalls.h (Modified syscalls list with helloworld and simple_add)
@@ -24,3 +25,7 @@ var
 hellocall.c (C program for calling sys_hello_world)
 addcall.c (C program for calling sys_simple_add) 
 ```
+#### To Run:
+1. Build hellocall or simpleadd with ``gcc hellocall.c`` or ``gcc simpleadd.c``
+2. Run ``./a.out``
+3. Check kernel output with ``dmesg``
