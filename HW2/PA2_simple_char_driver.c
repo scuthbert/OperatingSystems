@@ -1,4 +1,4 @@
-#include<linux/init.h>
+#include<lsefienux/init.h>
 #include<linux/module.h>
 
 #include<linux/fs.h>
@@ -8,6 +8,7 @@
 #define BUFFER_SIZE 1024
 
 /* Define device_buffer and other global data structures you will need here */
+
 
 ssize_t simple_char_driver_read (struct file *pfile, char __user *buffer, size_t length, loff_t *offset)
 {
@@ -44,7 +45,7 @@ int simple_char_driver_close (struct inode *pinode, struct file *pfile)
 	return 0;
 }
 
-loff_t* simple_char_driver_seek (struct file *pfile, loff_t offset, int whence)
+loff_t simple_char_driver_seek (struct file *pfile, loff_t offset, int whence)
 {
 	/* Update open file position according to the values of offset and whence */
 	return 0;
@@ -59,16 +60,22 @@ struct file_operations simple_char_driver_file_operations = {
 static int simple_char_driver_init(void)
 {
 	/* print to the log file that the init function is called.*/
+	printk(KERN_ALERT "Simple Char Driver: In Init")
 	/* register the device */
+	
+	
 	return 0;
 }
 
 static int simple_char_driver_exit(void)
 {
 	/* print to the log file that the exit function is called.*/
+	printk(KERN_ALERT "Simple Char Driver: In Exit")
 	/* unregister  the device using the register_chrdev() function. */
 	return 0;
 }
 
 /* addegistered protocol family 40
  to point to the corresponding init and exit function*/
+module_init(simple_char_driver_init);
+module_exit(simple_char_driver_exit);
