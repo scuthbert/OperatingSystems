@@ -1,4 +1,3 @@
-#include<lsefienux/init.h>
 #include<linux/module.h>
 
 #include<linux/fs.h>
@@ -8,6 +7,8 @@
 #define BUFFER_SIZE 1024
 
 /* Define device_buffer and other global data structures you will need here */
+int openCount;
+int closeCount;
 
 
 ssize_t simple_char_driver_read (struct file *pfile, char __user *buffer, size_t length, loff_t *offset)
@@ -36,12 +37,16 @@ ssize_t simple_char_driver_write (struct file *pfile, const char __user *buffer,
 int simple_char_driver_open (struct inode *pinode, struct file *pfile)
 {
 	/* print to the log file that the device is opened and also print the number of times this device has been opened until now*/
+	openCount++;
+	printk(KERN_ALERT "Simple Char Driver: Open #%d\n", openCount);
 	return 0;
 }
 
 int simple_char_driver_close (struct inode *pinode, struct file *pfile)
 {
 	/* print to the log file that the device is closed and also print the number of times this device has been closed until now*/
+	closeCount++;
+	printk(KERN_ALERT "Simple Char Driver: Close #%d\n", closeCount);
 	return 0;
 }
 
@@ -54,25 +59,33 @@ loff_t simple_char_driver_seek (struct file *pfile, loff_t offset, int whence)
 struct file_operations simple_char_driver_file_operations = {
 
 	.owner   = THIS_MODULE,
-	/* add the function pointers to point to the corresponding file operations. look at the file fs.h in the linux souce code*/
+	.open = simple_char_driver_open,
+	.release = simple_char_driver_close,
+	.llseek = simple_char_driver_seek,
+	.write = simple_char_driver_write,
+	.read = simple_char_driver_read
+
 };
 
 static int simple_char_driver_init(void)
 {
 	/* print to the log file that the init function is called.*/
-	printk(KERN_ALERT "Simple Char Driver: In Init")
+	printk(KERN_ALERT "Simple Char Driver: In Init\n");
 	/* register the device */
-	
+	register_chrdev(240, "simple_character_device", &simple_char_driver_file_operations);
+	openCount = 0;
+	closeCount = 0;
 	
 	return 0;
 }
 
-static int simple_char_driver_exit(void)
+void simple_char_driver_exit(void)
 {
 	/* print to the log file that the exit function is called.*/
-	printk(KERN_ALERT "Simple Char Driver: In Exit")
+	printk(KERN_ALERT "Simple Char Driver: In Exit\n");
 	/* unregister  the device using the register_chrdev() function. */
-	return 0;
+	unregister_chrdev(240, "simple_character_device");
+	
 }
 
 /* addegistered protocol family 40
