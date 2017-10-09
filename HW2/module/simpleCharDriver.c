@@ -25,11 +25,18 @@ ssize_t simple_char_driver_read (struct file *pfile, char __user *buffer, size_t
 		*offset = 0; // Let's read from the start
 	}
 
-	copy_to_user(buffer, device_buffer + *offset, length);
+	int error;
+	error = 0;
 
-	printk(KERN_ALERT "Simple Char Driver: Just read %lu bytes starting at %lld into the buffer.", length, *offset);
+	error = copy_to_user(buffer, device_buffer + *offset, length);
 
-	return 0;
+	if(error == 0) {
+		printk(KERN_ALERT "Simple Char Driver: Read %lu bytes starting at %lld.\n", length, *offset);
+		return length;
+	} else {
+		printk(KERN_ALERT "Simple Char Driver: Failed to read %lu bytes starting at %lld.\n", length, *offset);
+		return -EFAULT;
+	}
 }
 
 
@@ -40,8 +47,23 @@ ssize_t simple_char_driver_write (struct file *pfile, const char __user *buffer,
 	/* length is the length of the userspace buffer*/
 	/* current position of the opened file*/
 	/* copy_from_user function: destination is device_buffer and source is the userspace buffer *buffer */
+	
+	if(! *offset) { // First Write
+		*offset = 0; // Let's write from the start
+	}
 
-	return length;
+	int error;
+	error = 0;
+
+	error = copy_from_user(device_buffer + *offset, buffer, length);
+	
+	if(error == 0) {
+		printk(KERN_ALERT "Simple Char Driver: Wrote %lu bytes starting at %lld.\n", length, *offset);
+		return length;
+	} else {
+		printk(KERN_ALERT "Simple Char Driver: Failed to write %lu bytes starting at %lld.\n", length, *offset);
+		return -EFAULT;
+	}	
 }
 
 
@@ -64,7 +86,32 @@ int simple_char_driver_close (struct inode *pinode, struct file *pfile)
 loff_t simple_char_driver_seek (struct file *pfile, loff_t offset, int whence)
 {
 	/* Update open file position according to the values of offset and whence */
-	return 0;
+	loff_t newpos;
+	newpos = 0;
+
+	switch(whence) {
+		case SEEK_SET: 
+			newpos = offset;
+			break;
+		
+		case SEEK_CUR: 
+        		newpos = pfile->f_pos + offset;
+        		break;
+
+      		case SEEK_END: 
+        		newpos = BUFFER_SIZE - offset;
+        		break;
+	
+	}
+	
+	if (newpos < 0) {
+		printk(KERN_ALERT "Simple Char Driver: Failed seeking %lld bytes starting at %lld in mode %d.\n", offset, pfile->f_pos, whence);
+		return -EINVAL;
+	}
+
+	printk(KERN_ALERT "Simple Char Driver: Seeking %lld bytes starting at %lld.\n", offset, pfile->f_pos);
+	pfile -> f_pos = newpos;
+    	return newpos;
 }
 
 struct file_operations simple_char_driver_file_operations = {
@@ -99,6 +146,7 @@ void simple_char_driver_exit(void)
 	printk(KERN_ALERT "Simple Char Driver: In Exit\n");
 	/* unregister  the device using the register_chrdev() function. */
 	unregister_chrdev(240, "simple_character_device");
+	
 	kfree(device_buffer);
 }
 
