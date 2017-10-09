@@ -10,6 +10,9 @@
 int openCount;
 int closeCount;
 
+int locationInBuffer;
+
+char *device_buffer;
 
 ssize_t simple_char_driver_read (struct file *pfile, char __user *buffer, size_t length, loff_t *offset)
 {
@@ -17,6 +20,14 @@ ssize_t simple_char_driver_read (struct file *pfile, char __user *buffer, size_t
 	/* length is the length of the userspace buffer*/
 	/* offset will be set to current position of the opened file after read*/
 	/* copy_to_user function: source is device_buffer and destination is the userspace buffer *buffer */
+	
+	if(! *offset) { // First Read
+		*offset = 0; // Let's read from the start
+	}
+
+	copy_to_user(buffer, device_buffer + *offset, length);
+
+	printk(KERN_ALERT "Simple Char Driver: Just read %lu bytes starting at %lld into the buffer.", length, *offset);
 
 	return 0;
 }
@@ -75,7 +86,10 @@ static int simple_char_driver_init(void)
 	register_chrdev(240, "simple_character_device", &simple_char_driver_file_operations);
 	openCount = 0;
 	closeCount = 0;
-	
+	locationInBuffer = 0;	
+
+	device_buffer = kmalloc(BUFFER_SIZE, GFP_KERNEL);
+
 	return 0;
 }
 
@@ -85,7 +99,7 @@ void simple_char_driver_exit(void)
 	printk(KERN_ALERT "Simple Char Driver: In Exit\n");
 	/* unregister  the device using the register_chrdev() function. */
 	unregister_chrdev(240, "simple_character_device");
-	
+	kfree(device_buffer);
 }
 
 /* addegistered protocol family 40
