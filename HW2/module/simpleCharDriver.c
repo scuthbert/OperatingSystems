@@ -27,6 +27,11 @@ ssize_t simple_char_driver_read (struct file *pfile, char __user *buffer, size_t
 
 	int error;
 	error = 0;
+	
+	if(*offset + length > BUFFER_SIZE) {
+		printk(KERN_ALERT "Simple Char Driver: Failed to read %lu bytes starting at %lld.\n", length, *offset);
+		return -EFAULT;
+	}
 
 	error = copy_to_user(buffer, device_buffer + *offset, length);
 
@@ -54,6 +59,11 @@ ssize_t simple_char_driver_write (struct file *pfile, const char __user *buffer,
 
 	int error;
 	error = 0;
+
+	if(*offset + length > BUFFER_SIZE) {
+		printk(KERN_ALERT "Simple Char Driver: Failed to write %lu bytes starting at %lld.\n", length, *offset);
+		return -EFAULT;
+	}
 
 	error = copy_from_user(device_buffer + *offset, buffer, length);
 	
@@ -101,10 +111,14 @@ loff_t simple_char_driver_seek (struct file *pfile, loff_t offset, int whence)
       		case SEEK_END: 
         		newpos = BUFFER_SIZE - offset;
         		break;
+		default:
+			printk(KERN_ALERT "Simple Char Driver: Failed seeking %lld bytes starting at %lld in invalid mode %d.\n", offset, pfile->f_pos, whence);
+			return -EINVAL;
+			
 	
 	}
 	
-	if (newpos < 0) {
+	if (newpos < 0 || newpos > BUFFER_SIZE) {
 		printk(KERN_ALERT "Simple Char Driver: Failed seeking %lld bytes starting at %lld in mode %d.\n", offset, pfile->f_pos, whence);
 		return -EINVAL;
 	}
