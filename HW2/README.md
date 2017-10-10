@@ -1,5 +1,5 @@
 ### Samuel Cuthbertson 
-Email: Samuel (DOT) Cuthbertson (AT) colorado.edu
+Email: Samuel (DOT) Cuthbertson (AT) colorado (DOT) edu
 
 ### Content and Relevant Files:
 All content assusmes running in the CU-CS-VM Fall 2017 virtual machine. 
