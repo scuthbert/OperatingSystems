@@ -14,6 +14,6 @@ HW2
 ```
 #### To Run:
 1. Change directory to module, run ``sh ./build.sh``
-2. Change directort to client, run ``gcc client.c``
+2. Change directory to client, run ``gcc client.c``
 3. Run ``./a.out``
 4. Check kernel output with ``dmesg``
