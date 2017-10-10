@@ -13,6 +13,7 @@ HW2
 |  +--client.c (Userspace program for using the driver)
 ```
 #### To Run:
-1. Build hellocall or simpleadd with ``gcc hellocall.c`` or ``gcc simpleadd.c``
-2. Run ``./a.out``
-3. Check kernel output with ``dmesg``
+1. Change directory to module, run ``sh ./build.sh``
+2. Change directort to client, run ``gcc client.c``
+3. Run ``./a.out``
+4. Check kernel output with ``dmesg``
