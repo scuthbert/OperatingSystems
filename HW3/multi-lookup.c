@@ -6,10 +6,13 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <sys/time.h>
 #include "util.h"
 #include "multi-lookup.h"
 
 int main(int argc, char * argv[]){
+	struct timeval t0;
+	gettimeofday(&t0, 0);
   // Let's validate those command line arguments!
   // See if we have enough arguments
 	if(argc < MINARGS) {
@@ -149,7 +152,14 @@ int main(int argc, char * argv[]){
   // Clean up shared array
   q_delete(&namefiles);
   q_delete(&shared_arr);
-  return 0;
+
+	struct timeval t1;
+	gettimeofday(&t1, 0);
+
+	double elapsed = ((t1.tv_sec-t0.tv_sec)*1000000 + t1.tv_usec-t0.tv_usec);
+	fprintf(stdout, "Time Elapsed: %.6e microseconds.\n", elapsed);
+
+	return 0;
 }
 
 void* request_thread(void* id){
