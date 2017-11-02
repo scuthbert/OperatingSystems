@@ -1,0 +1,57 @@
+Number for requester thread = 1
+Number for resolver thread = 1
+Total run time: 1.733993e+06 microseconds.
+Thread 31330 serviced 005 files.
+
+Number for requester thread = 1
+Number for resolver thread = 3
+Total run time: Time Elapsed: 1.005882e+07 microseconds.
+Thread 31894 serviced 005 files.
+
+Number for requester thread = 3
+Number for resolver thread = 1
+Total run time: Time Elapsed: 3.336868e+06 microseconds.
+Thread 32002 serviced 001 files.
+Thread 32003 serviced 001 files.
+Thread 32001 serviced 003 files.
+
+Number for requester thread = 3
+Number for resolver thread = 3
+Total run time: Time Elapsed: 2.421050e+06 microseconds.
+Thread 32054 serviced 001 files.
+Thread 32055 serviced 001 files.
+Thread 32053 serviced 003 files.
+
+Number for requester thread = 5
+Number for resolver thread = 5
+Total run time: Time Elapsed: 1.633592e+06 microseconds.
+Thread 32099 serviced 001 files.
+Thread 32098 serviced 001 files.
+Thread 32102 serviced 001 files.
+Thread 32100 serviced 001 files.
+Thread 32101 serviced 001 files.
+
+Number for requester thread = 8
+Number for resolver thread = 5
+Total run time: Time Elapsed: 2.072457e+06 microseconds.
+Thread 32138 serviced 000 files.
+Thread 32140 serviced 000 files.
+Thread 32141 serviced 000 files.
+Thread 32142 serviced 001 files.
+Thread 32135 serviced 001 files.
+Thread 32137 serviced 001 files.
+Thread 32139 serviced 001 files.
+Thread 32136 serviced 001 files.
+
+
+  Here, we can see some expected behaviour. Our fastest configuration is matching
+number of input files to number of requester threads, with any smaller numbers
+being slower due to needing to obtain/open a new file, and any larger numbers
+being slower due to needlessly spinning up useless threads.
+  Similarly, our fastest number of resolver threads is consistently matching the
+number of requester threads. This makes sense, as if we have more resolvers than
+requesters, we will spend needless time spinning up resolvers that will spend
+time waiting on a semaphore for an item to be put on the shared array.
+Additionally, if we have fewer requesters than resolvers, we introduce a
+bottleneck on resolvers, and our requesters will spend time waiting for there to
+be space in the shared array.
