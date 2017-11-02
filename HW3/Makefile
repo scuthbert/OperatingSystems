@@ -1,4 +1,4 @@
-CC = clang
+CC = gcc
 CFLAGS = -c -g -Wall -Wextra
 LFLAGS = -pthread -Wall -Wextra
 

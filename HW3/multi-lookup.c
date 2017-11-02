@@ -189,7 +189,7 @@ void* request_thread(void* id){
 
 	sem_wait(info->log_sem);
 	*(info->done) += 1;
-	if(write(*(info->logfile), outputline, 33) != 33) err++;
+	if(write(*(info->logfile), outputline, strlen(outputline)) != (long)strlen(outputline)) err++;
   sem_post(info->log_sem);
 
 	free(outputline);
