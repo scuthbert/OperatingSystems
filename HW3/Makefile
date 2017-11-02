@@ -2,8 +2,6 @@ CC = clang
 CFLAGS = -c -g -Wall -Wextra
 LFLAGS = -pthread -Wall -Wextra
 
-.PHONY: all clean
-
 all: multi-lookup
 
 multi-lookup: multi-lookup.o util.o
