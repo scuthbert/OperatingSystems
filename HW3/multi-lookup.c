@@ -70,9 +70,6 @@ int main(int argc, char * argv[]){
   *     - serviced file
   *     - stderr
   *     - shared array: Let's take care of this in the queue functions
-  *   These two noly if we need it (num of requesters < num of name files)
-  *     - getting new name file
-  *     - need a new name file
   */
   sem_t results_sem;
   sem_init(&results_sem, 0, 1);
