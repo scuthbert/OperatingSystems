@@ -40,7 +40,7 @@ int main(int argc, char * argv[]){
   }
 
   // See if results file is writeable
-  int results = open(argv[3], O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+  int results = open(argv[3], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR);
   if (results < 0) {
     fprintf(stderr, "Fatal error: Cannot write to %s\n", argv[3]);
     fprintf(stderr, "Usage:\n %s %s\n", argv[0], HOWTO);
@@ -48,7 +48,7 @@ int main(int argc, char * argv[]){
   }
 
   // See if serviced file is writeable
-  int serviced = open(argv[4], O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+  int serviced = open(argv[4], O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR);
   if (serviced < 0) {
     fprintf(stderr, "Fatal error: Cannot write to %s\n", argv[4]);
     fprintf(stderr, "Usage:\n %s %s\n", argv[0], HOWTO);
