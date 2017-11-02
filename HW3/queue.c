@@ -1,102 +1,120 @@
-/*
- * File: queue.c
- * Author: Chris Wailes <chris.wailes@gmail.com>
- * Author: Wei-Te Chen <weite.chen@colorado.edu>
- * Author: Andy Sayler <andy.sayler@gmail.com>
- * Project: CSCI 3753 Programming Assignment 2
- * Create Date: 2010/02/12
- * Modify Date: 2011/02/04
- * Modify Date: 2012/02/01
- * Description:
- * 	This file contains an implementation of a simple FIFO queue.
- *  
- */
-
+#include <semaphore.h>
 #include <stdlib.h>
-
+#include <stdio.h>
+#include <string.h>
 #include "queue.h"
 
-int queue_init(queue* q, int size){
-    
-    int i;
+// Thread-Safe Queue Operations
+int q_init(queue* q, int size, int return_nil, int maxNodeSize) {
+  q->bottom = 0;
+  q->maxSize = size;
+	q->emptyable = return_nil;
+  q->array = malloc(sizeof(queue_node) * ((q->maxSize) + 1));
 
-    /* user specified size or default */
-    if(size>0) {
-	q->maxSize = size;
-    }
-    else {
-	q->maxSize = QUEUEMAXSIZE;
-    }
+  sem_t lock;
+  sem_init(&lock, 0, 1);
+  q->lock = lock;
 
-    /* malloc array */
-    q->array = malloc(sizeof(queue_node) * (q->maxSize));
-    if(!(q->array)){	
-	perror("Error on queue Malloc");
-	return QUEUE_FAILURE;
-    }
+  sem_t waitW;
+  sem_init(&waitW, 0, 0);
+  q->waiting_writers = waitW;
 
-    /* Set to NULL */
-    for(i=0; i < q->maxSize; ++i){
-	q->array[i].payload = NULL;
-    }
+	sem_t waitR;
+	sem_init(&waitR, 0, 0);
+	q->waiting_readers = waitR;
 
-    /* setup circular buffer values */
-    q->front = 0;
-    q->rear = 0;
+  if(!(q->array)) {
+    return -1;
+  }
 
-    return q->maxSize;
+  for(int i = 0; i < q->maxSize; i++){
+    q->array[i].data = malloc(sizeof(char) * maxNodeSize + 1);
+  }
+
+  return 0;
 }
 
-int queue_is_empty(queue* q){
-    if((q->front == q->rear) && (q->array[q->front].payload == NULL)){
-	return 1;
-    }
-    else{
-	return 0;
-    }
+int q_push(queue* q, char* new_data) {
+  // Get write permission
+	while(1) {
+		sem_wait(&(q->lock));
+
+		if(q->bottom == q->maxSize - 1) {
+			for(int i = 0; i < q->maxSize; i++) {
+				//printf("Array at %d: %s\n", i, q->array[i].data);
+			}
+			sem_post(&(q->lock));
+			sem_wait(&(q->waiting_writers));
+			// Dump contents, just this once.
+
+		}
+
+		else {
+			strcpy(q->array[q->bottom].data, new_data);
+
+			//fprintf(stderr, "Queue bottom: %d.\n", q->bottom);
+			q->bottom++;
+
+			sem_post(&(q->waiting_readers));
+			sem_post(&(q->lock));
+			return 1;
+		}
+	}
 }
 
-int queue_is_full(queue* q){
-    if((q->front == q->rear) && (q->array[q->front].payload != NULL)){
-	return 1;
-    }
-    else{
-	return 0;
-    }
+void q_done(queue* q) {
+  sem_wait(&(q->lock));
+	q->emptyable = 1;
+	sem_post(&(q->lock));
 }
 
-void* queue_pop(queue* q){
-    void* ret_payload;
-	
-    if(queue_is_empty(q)){
-	return NULL;
-    }
-	
-    ret_payload = q->array[q->front].payload;
-    q->array[q->front].payload = NULL;
-    q->front = ((q->front + 1) % q->maxSize);
+int q_pop(queue* q, char* dest) {
 
-    return ret_payload;
+  while(1) {
+		// Get read permissions
+		sem_wait(&(q->lock));
+
+		// We're empty
+		if(q->bottom == 0) {
+			sem_post(&(q->lock)); // Allow others to check
+			if(q->emptyable) {
+				return -1; 					// Return if being empty is allowed
+			}
+			sem_wait(&(q->waiting_readers)); // Else, wait for someone to push
+		}
+
+		// We're not full
+		else {
+			strcpy(dest, q->array[0].data); // Return value
+
+			for(int i = 0; i < q->bottom - 1; i++) {
+				//printf("Array length %d, moving %d to %d. \n", q->bottom, i+1, i);
+				strcpy(q->array[i].data, q->array[i + 1].data); //q->array[i].data = q->array[i + 1].data;
+			}
+
+			q->bottom--; // We're one smaller
+
+			sem_post(&(q->waiting_writers)); // Let someone know they can write
+			sem_post(&(q->lock));
+			return 1;
+		}
+  }
+
+
 }
 
-int queue_push(queue* q, void* new_payload){
-    
-    if(queue_is_full(q)){
-	return QUEUE_FAILURE;
-    }
+void q_delete(queue* q) {
+  sem_wait(&(q->lock));
 
-    q->array[q->rear].payload = new_payload;
+  while(q->bottom > 0) {
+    //sfprintf(stderr, "%s", q->array[q->bottom].data);
+    q->bottom--;
+  }
 
-    q->rear = ((q->rear+1) % q->maxSize);
+	for(int i = 0; i < q->maxSize; i++){
+		free(q->array[i].data);
+	}
 
-    return QUEUE_SUCCESS;
-}
-
-void queue_cleanup(queue* q)
-{
-    while(!queue_is_empty(q)){
-	queue_pop(q);
-    }
-
-    free(q->array);
+  free(q->array);
+  // Don't free up q->lock, freeze access.
 }
