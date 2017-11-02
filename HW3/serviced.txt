@@ -1,8 +1,0 @@
-Thread 25004 serviced 001 files.
-Thread 25007 serviced 001 files.
-Thread 25006 serviced 001 files.
-Thread 25003 serviced 001 files.
-Thread 25002 serviced 002 files.
-Thread 25000 serviced 002 files.
-Thread 25008 serviced 001 files.
-Thread 25005 serviced 001 files.
