@@ -113,7 +113,7 @@ int main(int argc, char * argv[]){
   struct requester_thread request_info;
   request_info.output = &shared_arr;
   request_info.logfile = &serviced;
-	request_info.done = &requesters_done;
+  request_info.done = &requesters_done;
   request_info.log_sem = &serviced_sem;
   request_info.err_sem = &stderr_sem;
   request_info.namequeue = &namefiles;
@@ -250,6 +250,7 @@ void* resolve_thread(void* id){
 			if(dnslookup(domain, ipaddr, sizeof(ipaddr)) == -1) {
 				// We failed
 				strncpy(ipaddr, "", sizeof(ipaddr));
+				err++;
 			}
 
 			// Output to file
