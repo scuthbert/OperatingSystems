@@ -41,16 +41,34 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <sys/time.h>
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #endif
 
+// Thanks Ahmed Almutawa for a boiler plate define
+#define XMP_INFO ((struct xmp_private*) fuse_get_context()->private_data)
+struct xmp_private { // The struct in fuse context private_data
+	char* base_path;
+	char* password;
+};
+
+#define USAGE "usage: ./pa4-encfs <passphrase> <mirror directory> <mount point>"
+
+static void new_path(char* full_path, char* part_path ) {
+	strcpy(full_path, XMP_INFO -> base_path);
+	strncat(full_path, part_path, PATH_MAX);
+}
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
 
-	res = lstat(path, stbuf);
+	char npath[PATH_MAX];
+	new_path(npath, path);
+
+	res = lstat(npath, stbuf);
 	if (res == -1)
 		return -errno;
 
@@ -61,7 +79,10 @@ static int xmp_access(const char *path, int mask)
 {
 	int res;
 
-	res = access(path, mask);
+	char npath[PATH_MAX];
+	new_path(npath, path);
+
+	res = access(npath, mask);
 	if (res == -1)
 		return -errno;
 
@@ -72,7 +93,10 @@ static int xmp_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
 
-	res = readlink(path, buf, size - 1);
+	char npath[PATH_MAX];
+	new_path(npath, path);
+
+	res = readlink(npath, buf, size - 1);
 	if (res == -1)
 		return -errno;
 
@@ -90,7 +114,10 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) offset;
 	(void) fi;
 
-	dp = opendir(path);
+	char npath[PATH_MAX];
+	new_path(npath, path);
+
+	dp = opendir(npath);
 	if (dp == NULL)
 		return -errno;
 
@@ -111,16 +138,19 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 {
 	int res;
 
+	char npath[PATH_MAX];
+	new_path(npath, path); 
+
 	/* On Linux this could just be 'mknod(path, mode, rdev)' but this
 	   is more portable */
 	if (S_ISREG(mode)) {
-		res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+		res = open(npath, O_CREAT | O_EXCL | O_WRONLY, mode);
 		if (res >= 0)
 			res = close(res);
 	} else if (S_ISFIFO(mode))
-		res = mkfifo(path, mode);
+		res = mkfifo(npath, mode);
 	else
-		res = mknod(path, mode, rdev);
+		res = mknod(npath, mode, rdev);
 	if (res == -1)
 		return -errno;
 
@@ -131,7 +161,10 @@ static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
 
-	res = mkdir(path, mode);
+	char npath[PATH_MAX];
+	new_path(npath, path);
+
+	res = mkdir(iath, mode);
 	if (res == -1)
 		return -errno;
 
