@@ -50,12 +50,13 @@
 
 // Thanks Ahmed Almutawa for a boiler plate define
 #define XMP_INFO ((struct xmp_private*) fuse_get_context()->private_data)
+#define ENC_XATTR "pa4-encfs.encrypted"
 struct xmp_private { // The struct in fuse context private_data
 	char* base_path;
 	char* password;
 };
 
-#define USAGE "usage: ./pa4-encfs <passphrase> <mirror directory> <mount point>"
+#define USAGE "usage: ./pa4-encfs <passphrase> <mirror directory> <mount point>\n"
 
 static void new_path(char* full_path, const char* part_path ) {
 	strcpy(full_path, XMP_INFO -> base_path);
@@ -374,22 +375,35 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 	return 0;
 }
 
-static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
+static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
+{
+	(void) fi;
 
-    (void) fi;
+    	int res;
+	
+    	char npath[PATH_MAX];
+    	new_path(npath, path);
 
-    int res;
+	// Set encrypted bit
+	FILE *f = fopen(npath, "wb+");
+	if(!do_crypt(f, f, 1, ENC_XATTR->password)){
+		fprintf(stderr, "Create: do_crypt failed.\n");
+    	}
+	fclose(f);
 
-		char npath[PATH_MAX];
-		new_path(npath, path);
+	if(xmp_setxattr(npath, XATRR_ENCRYPTED_FLAG, "true", 4, 0)){
+    		fprintf(stderr, "Create: Setting xattr failed %s.\n", npath);
+    		return -errno;
+   	}
 
-    res = creat(npath, mode);
-    if(res == -1)
-			return -errno;
+    	/*
+	res = creat(npath, mode);
+    	if(res == -1)
+		return -errno;
 
-    close(res);
-
-    return 0;
+    	close(res);
+	*/
+    	return 0;
 }
 
 
@@ -501,8 +515,8 @@ static struct fuse_operations xmp_oper = {
 int main(int argc, char *argv[])
 {
 	if(argc < 4) { // Check to see if we are using correctly
-  	fprintf(stderr, USAGE);
-  	return(errno);
+ 	 	fprintf(stderr, USAGE);
+  		return(errno);
 	}
 
 	struct xmp_private *xmp_data;
@@ -512,5 +526,5 @@ int main(int argc, char *argv[])
 	xmp_data -> password = argv[1];
 
 	umask(0);
-	return fuse_main(argc, argv, &xmp_oper, NULL);
+	return fuse_main(argc - 2, &argv[2], &xmp_oper, xmp_data);
 }
