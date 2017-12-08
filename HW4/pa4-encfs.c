@@ -49,9 +49,11 @@
 #include <sys/xattr.h>
 #endif
 
+#include "aes-crypt.h"
+
 // Thanks Ahmed Almutawa for a boiler plate define
 #define XMP_INFO ((struct xmp_private *)fuse_get_context()->private_data)
-#define ENC_XATTR "pa4-encfs.encrypted"
+#define ENC_XATTR "user.pa4-encfs.encrypted"
 struct xmp_private { // The struct in fuse context private_data
   char *base_path;
   char *password;
@@ -298,46 +300,155 @@ static int xmp_open(const char *path, struct fuse_file_info *fi) {
 
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
                     struct fuse_file_info *fi) {
-  int fd;
-  int res;
-
   (void)fi;
 
   char npath[PATH_MAX];
   new_path(npath, path);
 
-  fd = open(npath, O_RDONLY);
-  if (fd == -1)
+  int action = -1;
+
+  char enc[5] = "fals";
+  // NEW STYLE - w/ FILEs
+  if (getxattr(npath, ENC_XATTR, enc, 5) == -1) {
+    fprintf(stderr, "Read: Getting xattr (%s) failed %s.\n", enc, npath);
+    // No error, as reading an unencrypted file would lead us here.
+  }
+
+  fprintf(stderr, "Read: Got xattr value as %s on %s.\n", enc, npath);
+
+  char true[5] = "true";
+  if (!strcmp(enc, true)) { // Is the file encrypted?
+    // If so, open a tmp file and our file on disk
+    action = 0;
+  }
+
+  FILE *tfile = tmpfile(); //fopen(tmpath, "wb+"); // Thanks stdio
+  FILE *ffile = fopen(npath, "rb");
+
+  if (tfile == NULL) {
+    fprintf(stderr, "Read: Opening temp file failed %s.\n", npath);
     return -errno;
+  }
+  if (ffile == NULL) {
+    fprintf(stderr, "Read: Opening file failed %s.\n", npath);
+    return -errno;
+  }
 
-  res = pread(fd, buf, size, offset);
-  if (res == -1)
-    res = -errno;
+  if (do_crypt(ffile, tfile, action, XMP_INFO->password) == 0) {
+    fprintf(stderr, "Read: Decrypting failed %s.\n", npath);
+    return -errno;
+  }
 
-  close(fd);
-  return res;
+  // Check size of file
+  fseek(tfile, 0, SEEK_END);
+  size_t tfileLen = ftell(tfile);
+  fseek(tfile, 0, SEEK_SET);
+  fprintf(stderr, "Read: File size %lu bytes %s.\n", tfileLen, npath);
+
+  // Second, read into our buf at the correct offset
+  if (fseek(tfile, offset, SEEK_SET)) {
+    fprintf(stderr, "Read: Seeking %lu bytes failed %s.\n", offset, npath);
+    return -errno;
+  }
+
+  size_t readSize = fread(buf, sizeof(char), size, tfile);
+
+  //fclose(tfile);
+  fclose(ffile);
+
+  return readSize;
 }
 
 static int xmp_write(const char *path, const char *buf, size_t size,
                      off_t offset, struct fuse_file_info *fi) {
-  int fd;
-  int res;
 
   (void)fi;
+  int action = -1;
 
   char npath[PATH_MAX];
   new_path(npath, path);
 
-  fd = open(npath, O_WRONLY);
-  if (fd == -1)
-    return -errno;
+  char enc[5] = "fals";
+  // NEW STYLE - w/ FILEs
+  if (getxattr(npath, ENC_XATTR, enc, 5) == -1) {
+    fprintf(stderr, "Write: Getting xattr (%s) failed %s.\n", enc, npath);
+    // No error, as reading an unencrypted file would lead us here.
+  }
 
-  res = pwrite(fd, buf, size, offset);
-  if (res == -1)
-    res = -errno;
+  fprintf(stderr, "Write: Got xattr value as %s on %s.\n", enc, npath);
 
-  close(fd);
-  return res;
+  char true[5] = "true";
+  if (!strcmp(enc, true)) { // Is the file encrypted?
+    // If so, open a tmp file and our file on disk
+    action = 1;
+
+    FILE *tfile = tmpfile(); //fopen(tmpath, "wb+"); // Thanks stdio
+    FILE *ffile = fopen(npath, "wb+");
+
+    if (tfile == NULL) {
+      fprintf(stderr, "Write: Opening temp file failed %s.\n", npath);
+      return -errno;
+    }
+    if (ffile == NULL) {
+      fprintf(stderr, "Write: Opening file failed %s.\n", npath);
+      return -errno;
+    }
+
+    // Check size of file
+    fseek(ffile, 0, SEEK_END);
+    size_t fileLen = ftell(ffile);
+    fseek(ffile, 0, SEEK_SET);
+    fprintf(stderr, "Write: File size %lu bytes %s.\n", fileLen, npath);
+
+    // First, unencrypt file on disk into our tmpfile
+    if (fileLen > 0 && action != -1) {
+      if (do_crypt(ffile, tfile, 0, XMP_INFO->password) == 0) {
+        fprintf(stderr, "Write: Decrypting failed %s.\n", npath);
+        return 0;
+      }
+    }
+
+    // Second, write our buf at the correct offset
+    if (fseek(tfile, offset, SEEK_SET)) {
+      fprintf(stderr, "Write: Seeking %lu bytes failed %s.\n", offset, npath);
+      return -errno;
+    }
+
+    if (fwrite(buf, sizeof(char), size, tfile) != size) {
+      fprintf(stderr, "Write: Writing %lu bytes failed %s.\n", size, npath);
+      return -errno;
+    }
+
+    fseek(ffile, 0, SEEK_SET);
+    fseek(tfile, 0, SEEK_SET);
+
+    // Third, re-encrypt our file
+    if(do_crypt(tfile, ffile, action, XMP_INFO->password) == 0) {
+      fprintf(stderr, "Write: Encrypting failed %s.\n", npath);
+      return -errno;
+    }
+
+    // Last, close tfile and clean up
+    fclose(ffile);
+
+    return size;
+  } else {
+    int fd;
+    int res;
+
+    fd = open(path, O_WRONLY);
+    if (fd == -1)
+      return -errno;
+
+    res = pwrite(fd, buf, size, offset);
+    if (res == -1)
+      res = -errno;
+
+    close(fd);
+    return res;
+  }
+
+
 }
 
 static int xmp_statfs(const char *path, struct statvfs *stbuf) {
@@ -356,21 +467,25 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf) {
 static int xmp_create(const char *path, mode_t mode,
                       struct fuse_file_info *fi) {
   (void)fi;
+  (void)mode;
 
   char npath[PATH_MAX];
   new_path(npath, path);
 
-  // Set encrypted bit
-  FILE *f = fopen(npath, "wb+");
-  if (!do_crypt(f, f, 1, XMP_INFO->password)) {
-    fprintf(stderr, "Create: do_crypt failed.\n");
-  }
-  fclose(f);
+  int res;
+  res = creat(npath, mode);
+  if (res == -1)
+    return -errno;
 
-  if (setxattr(npath, ENC_XATTR, "true", 4, 0)) {
-    fprintf(stderr, "Create: Setting xattr failed %s.\n", npath);
+  close(res);
+
+  if (setxattr(npath, ENC_XATTR, "true", 5, 0)) {
+    fprintf(stderr, "Create: Setting xattr (%s) failed %s.\n", ENC_XATTR,
+            npath);
     return -errno;
   }
+
+  fprintf(stderr, "Create: Set xattr (%s) on %s.\n", ENC_XATTR, npath);
 
   return 0;
 }
