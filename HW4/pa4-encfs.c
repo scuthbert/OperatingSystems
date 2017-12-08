@@ -596,7 +596,7 @@ int main(int argc, char *argv[]) {
   }
 
   struct xmp_private *xmp_data;
-  xmp_data = malloc(sizeof(struct xmp_private));
+  xmp_data = malloc(sizeof(struct xmp_private)); // Mem leak - oh well?
 
   xmp_data->base_path = realpath(argv[2], NULL);
   xmp_data->password = argv[1];
