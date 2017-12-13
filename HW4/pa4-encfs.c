@@ -353,7 +353,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 
   size_t readSize = fread(buf, sizeof(char), size, tfile);
 
-  //fclose(tfile);
+  fclose(tfile);
   fclose(ffile);
 
   return readSize;
@@ -429,6 +429,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
     }
 
     // Last, close tfile and clean up
+    fclose(tfile);
     fclose(ffile);
 
     return size;
