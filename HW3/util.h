@@ -9,7 +9,7 @@
  * Description:
  * 	This file contains declarations of utility functions for
  *      Programming Assignment 3.
- *  
+ *
  */
 
 #ifndef UTIL_H
@@ -18,15 +18,15 @@
 /* Define the following to enable debug statments */
 // #define UTIL_DEBUG
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #define UTIL_FAILURE -1
 #define UTIL_SUCCESS 0
@@ -35,8 +35,6 @@
  * for hostname. IP address returned as string
  * firstIPstr of size maxsize
  */
-int dnslookup(const char* hostname,
-	      char* firstIPstr,
-	      int maxSize);
+int dnslookup(const char *hostname, char *firstIPstr, int maxSize);
 
 #endif

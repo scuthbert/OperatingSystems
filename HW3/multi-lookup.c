@@ -95,13 +95,9 @@ int main(int argc, char * argv[]){
       fprintf(stderr, "Fatal Error: Could not allocate namefile queue.\n");
       return -1;
   }
-  //q_init(&namefiles, MAX_INPUT_FILES);
-  for(int i = 5; i < argc; i++){
-    q_push(&namefiles, argv[i]);
-  }
 
   for(int i = 5; i < argc; i++){
-    //fprintf(stdout, "Namefile: %s\n", q_pop(&namefiles));
+    q_push(&namefiles, argv[i]);
   }
 
 	int requesters_done = 0;
