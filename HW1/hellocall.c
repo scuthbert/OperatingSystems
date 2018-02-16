@@ -1,7 +1,5 @@
-#include <unistd.h>
-#include <sys/syscall.h>
 #include <stdio.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
-int main() {
-	syscall(332);
-}
+int main() { syscall(332); }

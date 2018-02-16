@@ -7,7 +7,7 @@
 # Second Modified Date: 2017/03/12
 # Description:
 #	This is the Makefile for PA5.
-# 	Modified for Sam Cuthbertson's 
+# 	Modified for Sam Cuthbertson's submission
 
 
 CC           = gcc

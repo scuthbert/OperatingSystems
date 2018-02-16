@@ -322,7 +322,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
     action = 0;
   }
 
-  FILE *tfile = tmpfile(); //fopen(tmpath, "wb+"); // Thanks stdio
+  FILE *tfile = tmpfile(); // fopen(tmpath, "wb+"); // Thanks stdio
   FILE *ffile = fopen(npath, "rb");
 
   if (tfile == NULL) {
@@ -382,7 +382,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
     // If so, open a tmp file and our file on disk
     action = 1;
 
-    FILE *tfile = tmpfile(); //fopen(tmpath, "wb+"); // Thanks stdio
+    FILE *tfile = tmpfile(); // fopen(tmpath, "wb+"); // Thanks stdio
     FILE *ffile = fopen(npath, "wb+");
 
     if (tfile == NULL) {
@@ -423,7 +423,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
     fseek(tfile, 0, SEEK_SET);
 
     // Third, re-encrypt our file
-    if(do_crypt(tfile, ffile, action, XMP_INFO->password) == 0) {
+    if (do_crypt(tfile, ffile, action, XMP_INFO->password) == 0) {
       fprintf(stderr, "Write: Encrypting failed %s.\n", npath);
       return -errno;
     }
@@ -448,8 +448,6 @@ static int xmp_write(const char *path, const char *buf, size_t size,
     close(fd);
     return res;
   }
-
-
 }
 
 static int xmp_statfs(const char *path, struct statvfs *stbuf) {
